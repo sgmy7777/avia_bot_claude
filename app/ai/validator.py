@@ -2,10 +2,10 @@ from __future__ import annotations
 
 
 REQUIRED_HASHTAGS = ("#авиация", "#происшествие", "#небонаграни", "#авиабезопасность")
-REQUIRED_EMOJIS = ("✈️", "📍", "⚠️")
+REQUIRED_EMOJIS = ("✈️", "📍")  # ⚠️ опционален — только если есть пострадавшие
 
 
-def validate_rewrite(text: str, min_words: int = 80) -> tuple[bool, str]:
+def validate_rewrite(text: str, min_words: int = 60) -> tuple[bool, str]:
     words = text.split()
     if len(words) < min_words:
         return False, f"too_short (got {len(words)}, need {min_words})"

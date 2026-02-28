@@ -16,6 +16,7 @@ from app.domain.models import Incident
 from app.domain.normalizer import normalize_incident
 from app.observability.health import start_health_ticker, touch_health
 from app.observability.logging import setup_logging
+from app.photos.finder import PhotoFinder
 from app.publisher.telegram_client import TelegramPublisher
 from app.storage.repository import IncidentRepository
 
@@ -163,6 +164,7 @@ def process_once(settings: Settings) -> CycleStats:
     collector = AviationSafetyCollector(settings.user_agent, settings.asn_feed_urls)
     repository = IncidentRepository(settings.database_url)
     rewriter = _build_rewriter(settings)
+    photo_finder = PhotoFinder(user_agent=settings.user_agent)
     publisher = TelegramPublisher(
         settings.telegram_bot_token,
         settings.telegram_channel,
@@ -241,7 +243,15 @@ def process_once(settings: Settings) -> CycleStats:
                 stats.skipped_dry_run += 1
                 continue
 
-            publisher.publish(rewritten)
+            # Ищем фото борта или модели ВС
+            photo_url = photo_finder.find_photo(
+                registration=incident.aircraft,
+                aircraft_model=incident.aircraft,
+            )
+            if photo_url:
+                logger.info("photo found | id=%s", incident.incident_id)
+
+            publisher.publish(rewritten, photo_url=photo_url)
             repository.mark_published(incident.incident_id, rewritten)
             stats.published += 1
             stats.consecutive_failures = 0
